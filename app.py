@@ -7,7 +7,6 @@ from db import *
 app = Flask(__name__)
 
 app.config['SECRET_KEY']='a08hsd0983hroahid08qwh30iha08hdaws'
-app.config['DEBUG'] = True
 
 
 
