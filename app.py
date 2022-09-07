@@ -293,7 +293,7 @@ def index():
     for row in rows:
         access.append(row[0])
 
-    return render_template("index_new.html", weeks=weeks, products=products, products1=products, access=access, year=year, month=month)
+    return render_template("index.html", weeks=weeks, products=products, products1=products, access=access, year=year, month=month)
 
 
 
