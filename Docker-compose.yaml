@@ -1,0 +1,29 @@
+version: "3.3"
+services:
+  app:
+    container_name: calendar_api
+    image: calendar
+    environment:
+      - DB_USER=user
+      - DB_PASS=1234
+      - DB_HOST=calendar_postgresdb
+      - DB_PORT=5432
+      - DB_NAME=test
+      - FLASK_ENV=production
+      - UNISENDER_TOKEN=614mpmfijiyn3ztz5kt916x4epnqgypmbtacy9oy
+      - RECEIVER_EMAIL=address@mail.ru
+    ports:
+      - "5000:5000"
+    depends_on:
+      - calendar_postgresdb
+  calendar_postgresdb:
+    image: postgres:14.3
+    container_name: calendar_postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=test
+    volumes:
+      - ./data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
