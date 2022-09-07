@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adminka</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.1.min.js" integrity="sha256-o88AwQnZB+VDvE9tvIXrMQaPlFFSUTR+nldQm1LuPXQ=" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container-md mt-5 mb-5">
+        <div class="row mb-3">
+            <div class="col">
+                <h1 class="text-start fw-bold d-inline">Админка ⚙️</h1>
+            </div>
+            <div class="col d-flex justify-content-end align-items-center">
+                <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="modal" data-bs-target="#listModal" id="openListModal">Список</button>
+                <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="collapse" data-bs-target="#scheduleCollapse" onclick="scheduleModeToggle()">График</button>
+                <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="modal" data-bs-target="#productsModal">Продукты</button>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#accessModal">Доступ</button>
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col d-flex justify-content-between align-items-end">
+                <div>
+                    <p class="fw-bold mb-0">{{ year }}.{{ month }}</p>
+                </div>
+                <div>
+                    <div class="btn-group btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary" id="prevMonth">Назад</button>
+                        <button type="button" class="btn btn-outline-secondary" id="nextMonth">Далее</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col">
+                <div class="collapse" id="scheduleCollapse">
+                    <div class="card card-body">
+                        <div class="d-flex justify-content-between">
+                            <p class="fs-5 fw-bold">График</p>
+                            <button type="button" class="btn-close" data-bs-toggle="collapse" data-bs-target="#scheduleCollapse" onclick="scheduleModeToggle()"></button>
+                        </div>
+                        <div>
+                            <form id="scheduleForm">
+                                <div class="row">
+                                    <div class="col">
+                                        <label class="form-label">Начало</label>
+                                        <input type="time" class="form-control mb-2" id="scheduleStart" required>
+                                    </div>
+                                    <div class="col">
+                                        <label class="form-label">Конец</label>
+                                        <input type="time" class="form-control mb-2" id="scheduleFinish" required>
+                                    </div>
+                                </div>
+                                <p class="mb-3">Выберите на календаре дни, к которым нужно применить изменения графика!</p>
+                                <button type="submit" class="btn btn-primary">Сохранить</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <table class="table table-bordered rounded-3 overflow-hidden">
+                    <thead>
+                        <tr>
+                            <th scope="col">ПН</th>
+                            <th scope="col">ВТ</th>
+                            <th scope="col">СР</th>
+                            <th scope="col">ЧТ</th>
+                            <th scope="col">ПТ</th>
+                            <th scope="col">СБ</th>
+                            <th scope="col">ВС</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in weeks %}
+                        <tr>
+                            {% for day in week %}
+                                {% if day|length == 0 %}
+                                    <td></td>
+                                {% elif day|length == 1 %}
+                                    <td data-bs-toggle="modal" data-bs-target="#dayModal">{{ day['num'] }}</td>
+                                {% else %}
+                                    <td class="table-info" working_id="{{ day['id'] }}" data-bs-toggle="modal" data-bs-target="#dayModal">{{ day['num'] }}</td>
+                                {% endif %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="modal fade" id="accessModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Доступ</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="/internal/access/new" method="POST" class="mb-3">
+                                    <input type="text" name="year" value="{{ year }}" hidden>
+                                    <input type="text" name="month" value="{{ month }}" hidden>
+                                    <input type="submit" value="Создать код доступа" class="btn btn-outline-primary">
+                                </form>
+                                <ul class="list-group">
+                                    {% if access|length == 1 %}
+                                        <li class="list-group-item">{{ access[0] }}</li>
+                                    {% else %}
+                                        {% for code in access %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ code }}
+                                            <form action="/internal/access/delete" method="POST">
+                                                <input type="text" value="{{ code }}" name="code" hidden required>
+                                                <input type="text" name="year" value="{{ year }}" hidden>
+                                                <input type="text" name="month" value="{{ month }}" hidden>
+                                                <input type="submit" value="Удалить" class="btn btn-sm btn-outline-danger text-decoration-none">
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            <div class="modal-footer">
+                                <a href="/logout" class="btn btn-secondary">Выйти</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>          
+                <div class="modal fade" id="productsModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Продукты</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="/internal/products/new" method="POST" class="mb-3">
+                                    <input type="text" placeholder="Название продукта..." class="form-control mb-2" name="name" required>
+                                    <input type="text" name="year" value="{{ year }}" hidden>
+                                    <input type="text" name="month" value="{{ month }}" hidden>
+                                    <input type="submit" value="Создать продукт" class="btn btn-outline-primary">
+                                </form>
+                                <ul class="list-group">
+                                    {% if products|length == 0 %}
+                                        <p class="text-danger">Здесь еще ничего нет!</p>
+                                    {% else %}
+                                        {% for product in products %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ product["name"] }}
+                                            <form action="/internal/products/delete" method="POST">
+                                                <input type="text" value="{{ product['id'] }}" name="id" hidden required>
+                                                <input type="text" name="year" value="{{ year }}" hidden>
+                                                <input type="text" name="month" value="{{ month }}" hidden>
+                                                <input type="submit" value="Удалить" class="btn btn-sm btn-outline-danger text-decoration-none">
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal fade" id="dayModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="fs-5">График</p>
+                                <form action="" class="mb-4" id="scheduleForm">
+                                    <div class="row">
+                                        <div class="col">
+                                            <label class="form-label">Начало</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleStart" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">Конец</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleFinish" required>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <button type="submit" class="btn btn-primary">Сохранить</button>
+                                        </form>
+                                        <form action="/internal/day/disable" method="POST" id="disableWorking">
+                                            <input type="text" name="id" value="" hidden>
+                                            <input type="text" name="year" value="{{ year }}" hidden>
+                                            <input type="text" name="month" value="{{ month }}" hidden>
+                                            <button type="submit" class="btn btn-outline-danger">Сделать нерабочим</button>
+                                        </form>
+                                    </div>
+                                <hr>
+                                <p class="fs-5">Список заявок</p>
+                                <p class="d-none text-danger" id="nothingHere">Здесь пока ничего нет!</p>
+                                <ol class="list-group list-group mb-4">
+                                </ol>
+                                <form action="" id="createBookingForm">
+                                    <p class="fs-5">Создание заявки</p>
+                                    <div class="row">
+                                        <div class="col">
+                                            <label class="form-label">Начало</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleStart" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">Конец</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleFinish" required>
+                                        </div>
+                                    </div>
+                                    <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
+                                    <input type="email" class="form-control mb-2" name="email" placeholder="Email">
+                                    <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div id="checkboxes" class="mb-2">
+                                        {% for product in products %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="{{ product['id'] }}" name="products[]" id="cheker{{ product['id'] }}">
+                                            <label class="form-check-label" for="checker{{ product['id'] }}">
+                                                {{ product['name'] }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal fade" id="listModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Все заявки</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="d-none text-danger" id="nothingHere">Здесь пока ничего нет!</p>
+                                <ol class="list-group list-group mb-4">
+                                </ol>
+                                <form action="" id="createBookingForm">
+                                    <p class="fs-5">Создание заявки</p>
+                                    <label class="form-label">Дата</label>
+                                    <input type="date" class="form-control mb-2" id="scheduleDate" required>
+                                    <div class="row">
+                                        <div class="col">
+                                            <label class="form-label">Начало</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleStart" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">Конец</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleFinish" required>
+                                        </div>
+                                    </div>
+                                    <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
+                                    <input type="email" class="form-control mb-2" name="email" placeholder="Email">
+                                    <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div id="checkboxes" class="mb-2">
+                                        {% for product in products %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="{{ product['id'] }}" name="products[]" id="cheker{{ product['id'] }}">
+                                            <label class="form-check-label" for="checker{{ product['id'] }}">
+                                                {{ product['name'] }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal fade" id="editBookingModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Редактирование заявки</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="" id="editBookingForm">
+                                    <input type="text" name="id" hidden>
+                                    <div class="row">
+                                        <div class="col">
+                                            <label class="form-label">Начало</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleStart" required>
+                                        </div>
+                                        <div class="col">
+                                            <label class="form-label">Конец</label>
+                                            <input type="time" class="form-control mb-2" id="scheduleFinish" required>
+                                        </div>
+                                    </div>
+                                    <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
+                                    <input type="email" class="form-control mb-2" name="email" placeholder="Email">
+                                    <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div id="checkboxes" class="mb-2">
+                                        {% for product in products1 %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="{{ product['id'] }}" name="products[]" id="cheker{{ product['id'] }}">
+                                            <label class="form-check-label" for="checker{{ product['id'] }}">
+                                                {{ product['name'] }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>    
+</body>
+</html>
+
+<style>
+    th {
+        text-align: center;
+    }
+
+    td {
+        text-align: center;
+        vertical-align: middle;
+        cursor: pointer;
+        transition: 0.15s linear;
+    }
+
+</style>
+
+
+<script>
+    // SCHEDULES
+    // WORKING
+    // BOOKING
+
+    // Schedule mode allows to choose and submit days with new schedule
+    scheduleMode = false;
+    scheduleDays = [];
+    oldSchedule = [];
+
+    // Schedule mode toggle funtion
+    function scheduleModeToggle() {
+        scheduleDays = [];
+        oldSchedule = [];
+        if (scheduleMode == true) {
+            scheduleMode = false;
+            $("td").removeClass("table-success");
+            $("td").each(function() {
+                if ($(this).attr("working_id") != undefined) {
+                    $(this).addClass("table-info");
+                };               
+            });
+            $("td").attr("data-bs-toggle", "modal");
+        } else {
+            scheduleMode = true;
+            $("td").attr("data-bs-toggle", "");
+        };
+    };
+
+    // Table cell hover handler
+    $("td").hover(
+        function() {
+            if (!scheduleMode && $(this).text() != "") {
+                $(this).removeClass("table-success");
+                $(this).removeClass("table-info");
+                $(this).addClass("table-secondary");
+            };
+        },
+        function() {
+            if (!scheduleMode) {
+                $(this).removeClass("table-secondary");
+                if ($(this).attr("working_id") != undefined) {
+                    $(this).addClass("table-info");
+                };
+            };
+        }
+    );
+
+    // Table cell click handler, adds and removes days to schedule lists
+    // when in schedule mode
+    // With schedule mode disabled it opens a modal window with day details
+    $("td").on("click", function() {
+        if (scheduleMode && $(this).text() != "") {
+            day = "{{ year }}-{{ month }}-"+$(this).text()
+            if ($(this).hasClass("table-success")) {
+                scheduleDays.splice(scheduleDays.indexOf(day), 1);
+                if ($(this).attr("working_id") != undefined) {
+                    oldSchedule.splice(oldSchedule.indexOf($(this).attr("working_id")), 1);
+                };
+            } else {
+                scheduleDays.push(day);
+                if ($(this).attr("working_id") != undefined) {
+                    oldSchedule.push($(this).attr("working_id"));
+                };
+            };
+
+            $(this).toggleClass("table-success");
+            if ($(this).attr("working_id") != undefined) {
+                $(this).toggleClass("table-info");
+            };
+        } else {
+            working_id = $(this).attr("working_id");
+            $("#dayModal").find(".modal-title").text("{{ year }}.{{ month }}."+$(this).text());
+            scheduleDays = ["{{ year }}-{{ month }}-"+$(this).text()];
+            if (working_id != undefined) {
+                oldSchedule = [working_id];
+                $.ajax({
+                    type: "POST",
+                    url: "/internal/day/get",
+                    data: JSON.stringify({
+                        id: working_id,
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                }).done(function(data) {
+                    console.log(data);
+
+                    $("#dayModal #scheduleStart").val(data["start"]);
+                    $("#dayModal #scheduleFinish").val(data["finish"]);
+                    
+                    if (data["booking"].length == 0) {
+                        $("#dayModal #nothingHere").removeClass("d-none");
+                    } else {
+                        $("#dayModal #nothingHere").addClass("d-none");
+                    };               
+
+                    $("#dayModal #createBookingForm").removeClass("d-none");
+                    $("#disableWorking button").removeAttr("disabled");
+                    $("#disableWorking input[name='id']").attr("value", working_id);
+
+                    $("#dayModal ol").html("");
+                    for (const booking of data["booking"]) {
+                        newBookingProducts = ``;
+                        for (const product of booking["products"]) {
+                            newBookingProducts = newBookingProducts + `<span class="badge bg-primary ms-1">${product['name']}</span>`;
+                        };
+                        newBooking = `<li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="fw-bold">${booking['start']} - ${booking['finish']}</div>
+                                ${booking['name']} - <a class="text-decoration-none">${booking['email']}</a>
+                                <p class="text-muted mb-0">${booking['note']}</p>
+                                <form action="/internal/booking/delete" method="POST">
+                                    <input name="id" type="text" value="${booking['id']}" hidden>
+                                    <input name="year" type="text" value="{{ year }}" hidden>
+                                    <input name="month" type="text" value="{{ month }}" hidden>
+                                    <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none p-0">Удалить</button>
+                                </form>
+                            </div>
+                            <div>
+                                ${newBookingProducts}
+                            </div>
+                        </li>`;
+                        $("#dayModal").find("ol").append(newBooking);
+                    };
+                });
+            } else {
+                oldSchedule = [];
+                $("#disableWorking button").attr("disabled", true);
+                $("#dayModal #scheduleStart").val("");
+                $("#dayModal #scheduleFinish").val("");
+                $("#dayModal ol").html("");
+                $("#dayModal #nothingHere").removeClass("d-none");
+                $("#dayModal #createBookingForm").addClass("d-none");
+            };
+        };
+    });
+
+    // Schedule form submition handler
+    $("#scheduleCollapse #scheduleForm").on("submit", function(e) {
+        e.preventDefault();
+
+        start = $("#scheduleCollapse #scheduleStart").val();
+        finish = $("#scheduleCollapse #scheduleFinish").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/internal/schedule",
+            data: JSON.stringify({
+                year: "{{ year }}",
+                month: "{{ month }}",
+                start: start,
+                finish: finish,
+                days: scheduleDays,
+                old: oldSchedule,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            window.location.reload(true);  
+        });
+    });
+
+    $("#dayModal #scheduleForm").on("submit", function(e) {
+        e.preventDefault();
+
+        start = $("#dayModal #scheduleForm #scheduleStart").val();
+        finish = $("#dayModal #scheduleForm #scheduleFinish").val();
+
+        $.ajax({
+            type: "POST",
+            url: "/internal/schedule",
+            data: JSON.stringify({
+                year: "{{ year }}",
+                month: "{{ month }}",
+                start: start,
+                finish: finish,
+                days: scheduleDays,
+                old: oldSchedule,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            window.location.reload(true);  
+        });
+    });
+
+    $("#dayModal #createBookingForm").on("submit", function(e) {
+        e.preventDefault();
+
+        oldStart = $("#dayModal #scheduleForm #scheduleStart").val();
+        oldFinish = $("#dayModal #scheduleForm #scheduleFinish").val();
+        start = $("#dayModal #createBookingForm #scheduleStart").val();
+        finish = $("#dayModal #createBookingForm #scheduleFinish").val();
+        name = $("#dayModal #createBookingForm input[name='name']").val();
+        email = $("#dayModal #createBookingForm input[name='email']").val();
+        note = $("#dayModal #createBookingForm textarea").val();
+        products = [];
+
+        $("#dayModal #createBookingForm #checkboxes input:checked").each(function() {
+            products.push($(this).val());
+        });
+
+        console.log(products)
+
+        $.ajax({
+            type: "POST",
+            url: "/internal/booking/new",
+            data: JSON.stringify({
+                working_id: oldSchedule[0],
+                year: "{{ year }}",
+                month: "{{ month }}",
+                start: start,
+                finish: finish,
+                oldStart: oldStart,
+                oldFinish: oldFinish,
+                name: name,
+                email: email,
+                note: note,
+                products: products,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            window.location.reload(true);  
+        });
+    });
+
+
+    // WORKING AND BOOKING
+    $("#openListModal").on("click", function() {
+        $.ajax({
+            type: "POST",
+            url: "/internal/booking/list",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            console.log(data);
+
+            if (data.length == 0) {
+                $("#listModal #nothingHere").removeClass("d-none");
+            } else {
+                $("#listModal #nothingHere").addClass("d-none");
+            };               
+
+            $("#listModal ol").html("");
+            for (const booking of data) {
+                newBookingProducts = ``;
+                for (const product of booking["products"]) {
+                    newBookingProducts = newBookingProducts + `<span class="badge bg-primary ms-1">${product['name']}</span>`;
+                };
+                newBooking = `<li class="list-group-item d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="fw-bold">${booking['date']}<br>${booking['start']} - ${booking['finish']}</div>
+                        ${booking['name']} - <a class="text-decoration-none">${booking['email']}</a>
+                        <p class="text-muted mb-0">${booking['note']}</p>
+                        <div class="d-flex justify-content-start align-items-center">
+                            <form action="/internal/booking/delete" method="POST">
+                                <input name="id" type="text" value="${booking['id']}" hidden>
+                                <input name="year" type="text" value="{{ year }}" hidden>
+                                <input name="month" type="text" value="{{ month }}" hidden>
+                                <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none p-0 me-2">Удалить</button>
+                            </form>
+                            <button type="button" class="btn btn-sm btn-link text-primary text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#editBookingModal" onclick="editBookingButton('${booking['id']}');">Изменить</button>
+                        </div>
+                    </div>
+                    <div>
+                        ${newBookingProducts}
+                    </div>
+                </li>`;
+                $("#listModal").find("ol").append(newBooking);
+            };
+        });
+    });
+
+    $("#listModal #createBookingForm").on("submit", function(e) {
+        e.preventDefault();
+
+        date = $("#listModal #createBookingForm input[type='date']").val();
+        start = $("#listModal #createBookingForm #scheduleStart").val();
+        finish = $("#listModal #createBookingForm #scheduleFinish").val();
+        name = $("#listModal #createBookingForm input[name='name']").val();
+        email = $("#listModal #createBookingForm input[name='email']").val();
+        note = $("#listModal #createBookingForm textarea").val();
+        products = [];
+
+        $("#listModal #createBookingForm #checkboxes input:checked").each(function() {
+            products.push($(this).val());
+        });       
+
+        $.ajax({
+            type: "POST",
+            url: "/internal/booking/new2",
+            data: JSON.stringify({
+                year: "{{ year }}",
+                month: "{{ month }}",
+                start: start,
+                finish: finish,
+                date: date,
+                name: name,
+                email: email,
+                note: note,
+                products: products,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            window.location.reload(true);  
+        });
+    });
+
+    function editBookingButton(booking_id) {
+        $.ajax({
+            type: "POST",
+            url: "/internal/booking/get",
+            data: JSON.stringify({
+                booking_id: booking_id,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            console.log('data')
+            console.log(data)
+            $("#editBookingModal").find("input[name='id']").val(booking_id);
+            $("#editBookingModal").find("#scheduleStart").val(data["start"]);
+            $("#editBookingModal").find("#scheduleFinish").val(data["finish"]);
+            $("#editBookingModal").find("input[name='name']").val(data["name"]);
+            $("#editBookingModal").find("input[name='email']").val(data["email"]);
+            $("#editBookingModal").find("textarea").val(data["note"]);
+
+            $("#editBookingModal #checkboxes input").removeAttr("checked");
+            for (const product of data["products"]) {
+                console.log("heeey")
+                $(`#editBookingModal #editBookingForm #checkboxes input[value='${product['id']}']`).attr("checked", true);
+            };
+        });
+    };
+
+    $("#editBookingModal #editBookingForm").on("submit", function(e) {
+        e.preventDefault();
+
+        booking_id = $("#editBookingModal #editBookingForm input[name='id']").val();
+        start = $("#editBookingModal #editBookingForm #scheduleStart").val();
+        finish = $("#editBookingModal #editBookingForm #scheduleFinish").val();
+        name = $("#editBookingModal #editBookingForm input[name='name']").val();
+        email = $("#editBookingModal #editBookingForm input[name='email']").val();
+        note = $("#editBookingModal #editBookingForm textarea").val();
+        products = [];
+
+        $("#editBookingModal #editBookingForm #checkboxes input:checked").each(function() {
+            products.push($(this).val());
+        });       
+
+        $.ajax({
+            type: "POST",
+            url: "/internal/booking/edit",
+            data: JSON.stringify({
+                booking_id: booking_id,
+                start: start,
+                finish: finish,
+                name: name,
+                email: email,
+                note: note,
+                products: products,
+            }),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+        }).done(function(data) {
+            window.location.reload(true);  
+        });
+    });
+</script>
+
+<script>
+    // Back and forward buttons
+    $("#prevMonth").on("click", function() {
+        link = "/";
+        month = Number("{{ month }}");
+        year = Number("{{ year }}");
+
+        if (month == 1) {
+            link = link + `?month=12&year=${year-1}`;
+        } else {
+            link = link + `?month=${month-1}&year=${year}`;
+        }
+
+        window.location.href = link;
+    });
+
+    $("#nextMonth").on("click", function() {
+        link = "/";
+        month = Number("{{ month }}");
+        year = Number("{{ year }}");
+
+        if (month == 12) {
+            link = link + `?month=1&year=${year+1}`;
+        } else {
+            link = link + `?month=${month+1}&year=${year}`;
+        }
+
+        window.location.href = link;
+    });
+</script>
