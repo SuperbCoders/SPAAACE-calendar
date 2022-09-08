@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.10.5
 
 WORKDIR /work
 COPY . /work
