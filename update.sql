@@ -1,0 +1,5 @@
+CREATE TABLE public.price (
+	more int NOT NULL DEFAULT 10000
+);
+
+ALTER TABLE booking ADD COLUMN price BOOL NOT NULL DEFAULT false;
