@@ -19,7 +19,8 @@
                 <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="modal" data-bs-target="#listModal" id="openListModal">Список</button>
                 <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="collapse" data-bs-target="#scheduleCollapse" onclick="scheduleModeToggle()">График</button>
                 <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="modal" data-bs-target="#productsModal">Продукты</button>
-                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#accessModal">Доступ</button>
+                <button class="btn btn-outline-primary" style="margin-right: 0.4rem;" data-bs-toggle="modal" data-bs-target="#accessModal">Доступ</button>
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#priceModal">Бюджет</button>
             </div>
         </div>
         <div class="row mb-2">
@@ -93,6 +94,24 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <div class="modal fade" id="priceModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Уровень бюджета</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <form action="/internal/price" method="POST" class="mb-3">
+                                    <input type="text" name="year" value="{{ year }}" hidden>
+                                    <input type="text" name="month" value="{{ month }}" hidden>
+                                    <input type="number" name="price" value="{{ price }}" class="form-control mb-2" required>
+                                    <input type="submit" value="Сохранить" class="btn btn-outline-primary">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>          
                 <div class="modal fade" id="accessModal" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -215,6 +234,10 @@
                                     <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
                                     <input type="email" class="form-control mb-2" name="email" placeholder="Email">
                                     <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="price" value="true" type="checkbox" id="flexSwitchCheckDefault">
+                                        <label class="form-check-label" for="flexSwitchCheckDefault">Бюджет больше {{ price }}</label>
+                                    </div>
                                     <div id="checkboxes" class="mb-2">
                                         {% for product in products %}
                                         <div class="form-check">
@@ -259,6 +282,10 @@
                                     <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
                                     <input type="email" class="form-control mb-2" name="email" placeholder="Email">
                                     <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="price" value="true" type="checkbox" id="flexSwitchCheckDefault">
+                                        <label class="form-check-label" for="flexSwitchCheckDefault">Бюджет больше {{ price }}</label>
+                                    </div>
                                     <div id="checkboxes" class="mb-2">
                                         {% for product in products %}
                                         <div class="form-check">
@@ -298,6 +325,10 @@
                                     <input type="text" class="form-control mb-2" name="name" placeholder="Имя клиента">
                                     <input type="email" class="form-control mb-2" name="email" placeholder="Email">
                                     <textarea rows="2" class="form-control mb-2" name="note" placeholder="Заметка"></textarea>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" name="price" value="true" type="checkbox" id="flexSwitchCheckDefault">
+                                        <label class="form-check-label" for="flexSwitchCheckDefault">Бюджет больше {{ price }}</label>
+                                    </div>
                                     <div id="checkboxes" class="mb-2">
                                         {% for product in products1 %}
                                         <div class="form-check">
@@ -441,10 +472,17 @@
                         for (const product of booking["products"]) {
                             newBookingProducts = newBookingProducts + `<span class="badge bg-primary ms-1">${product['name']}</span>`;
                         };
+                        price = " {{ price }}";
+                        if (booking["price"] == true) {
+                            price = "Бюджет выше" + price;
+                        } else {
+                            price = "Бюджет ниже" + price;
+                        }
                         newBooking = `<li class="list-group-item d-flex justify-content-between align-items-start">
                             <div>
                                 <div class="fw-bold">${booking['start']} - ${booking['finish']}</div>
                                 ${booking['name']} - <a class="text-decoration-none">${booking['email']}</a>
+                                <p class="mb-0">${price}</p>
                                 <p class="text-muted mb-0">${booking['note']}</p>
                                 <form action="/internal/booking/delete" method="POST">
                                     <input name="id" type="text" value="${booking['id']}" hidden>
@@ -530,6 +568,7 @@
         finish = $("#dayModal #createBookingForm #scheduleFinish").val();
         name = $("#dayModal #createBookingForm input[name='name']").val();
         email = $("#dayModal #createBookingForm input[name='email']").val();
+        price = $("#dayModal #createBookingForm input[name='price']").is(":checked");
         note = $("#dayModal #createBookingForm textarea").val();
         products = [];
 
@@ -553,6 +592,7 @@
                 name: name,
                 email: email,
                 note: note,
+                price: price,
                 products: products,
             }),
             contentType: "application/json; charset=utf-8",
@@ -585,10 +625,17 @@
                 for (const product of booking["products"]) {
                     newBookingProducts = newBookingProducts + `<span class="badge bg-primary ms-1">${product['name']}</span>`;
                 };
+                price = " {{ price }}";
+                if (booking["price"] == true) {
+                    price = "Бюджет выше" + price;
+                } else {
+                    price = "Бюджет ниже" + price;
+                }
                 newBooking = `<li class="list-group-item d-flex justify-content-between align-items-start">
                     <div>
                         <div class="fw-bold">${booking['date']}<br>${booking['start']} - ${booking['finish']}</div>
                         ${booking['name']} - <a class="text-decoration-none">${booking['email']}</a>
+                        <p class="mb-0">${price}</p>
                         <p class="text-muted mb-0">${booking['note']}</p>
                         <div class="d-flex justify-content-start align-items-center">
                             <form action="/internal/booking/delete" method="POST">
@@ -617,12 +664,13 @@
         finish = $("#listModal #createBookingForm #scheduleFinish").val();
         name = $("#listModal #createBookingForm input[name='name']").val();
         email = $("#listModal #createBookingForm input[name='email']").val();
+        price = $("#listModal #createBookingForm input[name='price']").is(":checked");
         note = $("#listModal #createBookingForm textarea").val();
         products = [];
 
         $("#listModal #createBookingForm #checkboxes input:checked").each(function() {
             products.push($(this).val());
-        });       
+        });
 
         $.ajax({
             type: "POST",
@@ -635,6 +683,7 @@
                 date: date,
                 name: name,
                 email: email,
+                price: price,
                 note: note,
                 products: products,
             }),
@@ -662,6 +711,9 @@
             $("#editBookingModal").find("#scheduleFinish").val(data["finish"]);
             $("#editBookingModal").find("input[name='name']").val(data["name"]);
             $("#editBookingModal").find("input[name='email']").val(data["email"]);
+            if (data["price"] == true) {
+                $("#editBookingModal").find("input[name='price']").attr("checked", true);
+            }
             $("#editBookingModal").find("textarea").val(data["note"]);
 
             $("#editBookingModal #checkboxes input").removeAttr("checked");
@@ -680,6 +732,7 @@
         finish = $("#editBookingModal #editBookingForm #scheduleFinish").val();
         name = $("#editBookingModal #editBookingForm input[name='name']").val();
         email = $("#editBookingModal #editBookingForm input[name='email']").val();
+        price = $("#editBookingModal #editBookingForm input[name='price']").is(":checked");
         note = $("#editBookingModal #editBookingForm textarea").val();
         products = [];
 
@@ -696,6 +749,7 @@
                 finish: finish,
                 name: name,
                 email: email,
+                price: price,
                 note: note,
                 products: products,
             }),

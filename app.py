@@ -7,6 +7,7 @@ from db import *
 app = Flask(__name__)
 
 app.config['SECRET_KEY']='a08hsd0983hroahid08qwh30iha08hdaws'
+app.config['DEBUG'] = True
 
 
 
@@ -70,12 +71,12 @@ def api_get():
     for row in rows:
         days.append({"id":row[0], "start":row[1], "finish":row[2], "date":row[3], "booking":[]})
 
-    query = 'SELECT id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note FROM booking WHERE working_id = %s;'
+    query = 'SELECT id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note, price FROM booking WHERE working_id = %s;'
     for day in days:
         cur.execute(query, (day["id"],))
         rows = cur.fetchall()
         for row in rows:
-            day["booking"].append({"id":row[0], "start":row[1], "finish":row[2], "name":row[3], "email":row[4], "note":row[5], "products":[]})
+            day["booking"].append({"id":row[0], "start":row[1], "finish":row[2], "name":row[3], "email":row[4], "note":row[5], "price":row[6], "products":[]})
             
             query_products = '''SELECT 
             booking_products.product_id,
@@ -113,6 +114,23 @@ def api_products():
 
     return jsonify(products)
 
+@app.route("/api/price", methods=['GET'])
+def api_price():
+    conn = connect()
+    cur = conn.cursor()
+
+    query = 'SELECT more FROM price;'
+    cur.execute(query)
+
+    row = cur.fetchone()
+    result = {"price":row[0]}
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify(result)
+
 @app.route("/api/book", methods=['POST'])
 def api_book():
     conn = connect()
@@ -144,6 +162,10 @@ def api_book():
     if note == None or len(note) == 0:
         note = ""
 
+    price = data["price"]
+    if price == None:
+        return jsonify({"error":"price level not provided!"})
+
     products = []
     if "products" in data:
         products = data["products"]
@@ -157,10 +179,10 @@ def api_book():
     
     working_id = row[0]
 
-    query = 'INSERT INTO booking(working_id, start, finish, name, email, note) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note;'
-    cur.execute(query, (working_id, start.replace(".", "-"), finish.replace(".", "-"), name, email, note))
+    query = 'INSERT INTO booking(working_id, start, finish, name, email, note, price) VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note, price;'
+    cur.execute(query, (working_id, start.replace(".", "-"), finish.replace(".", "-"), name, email, note, price))
     row = cur.fetchone()
-    response = {"id":row[0], "start":row[1], "finish":row[2], "name":row[3], "email":row[4], "note":row[5], "products":products}
+    response = {"id":row[0], "start":row[1], "finish":row[2], "name":row[3], "email":row[4], "note":row[5], "price":row[6], "products":products}
     booking_id = row[0]
 
     for product in products:
@@ -172,9 +194,15 @@ def api_book():
     cur.close()
     conn.close()
 
+    price_level = ""
+    if row[6] == True:
+        price_level = "Цена выше порога"
+    else:
+        price_level = "Цена ниже порога"
+
     api_token = os.getenv("UNISENDER_TOKEN")
     receiver = os.getenv("RECEIVER_EMAIL")
-    message = "<b>Поступила новая заявка!</b>Имя: %s<br>Email: %s<br>День: %s<br>Время: %s - %s" % (name, email, date, start, finish)
+    message = "<b>Поступила новая заявка!</b>Имя: %s<br>Email: %s<br>День: %s<br>Время: %s - %s<br>%s" % (name, email, date, start, finish, price_level)
     r = requests.get("https://api.unisender.com/ru/api/sendEmail?format=json&api_key=%s&email=Автоматическое сообщение <%s>&sender_name=NoReply&sender_email=no-reply@spaaace.io&subject=Уведомление о заявке&body=%s&lang=ru&error_checking=1&list_id=1" % (api_token, receiver, message))
 
     if r.status_code == 200:
@@ -293,7 +321,15 @@ def index():
     for row in rows:
         access.append(row[0])
 
-    return render_template("index.html", weeks=weeks, products=products, products1=products, access=access, year=year, month=month)
+    query = 'SELECT more FROM price;'
+    cur.execute(query)
+    price = cur.fetchone()[0]
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return render_template("index.html", weeks=weeks, products=products, products1=products, access=access, year=year, month=month, price=price)
 
 
 
@@ -356,13 +392,13 @@ def get_day():
     day = {"id":row[0], "date":row[1], "start":row[2], "finish":row[3], "booking":[]}
 
     # Select booking data of the working day
-    query = 'SELECT id, working_id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note FROM booking WHERE working_id = %s;'
+    query = 'SELECT id, working_id, to_char(start, \'HH24:MI\'), to_char(finish, \'HH24:MI\'), name, email, note, price FROM booking WHERE working_id = %s;'
     cur.execute(query, (id,))
 
     rows = cur.fetchall()
 
     for row in rows:
-        day["booking"].append({"id":row[0], "start":row[2], "finish":row[3], "name": row[4], "email": row[5], "note":row[6], "products":[]})
+        day["booking"].append({"id":row[0], "start":row[2], "finish":row[3], "name": row[4], "email": row[5], "note":row[6], "price":row[7], "products":[]})
 
     # Select booking products and set that data
     for booking in day["booking"]:
@@ -449,6 +485,11 @@ def new_booking():
     name = data["name"]
     email = data["email"]
     note = data["note"]
+    price = data["price"]
+    if price == "true":
+        price = True
+    elif price == "false":
+        price = False
     products = data["products"]
 
     oldStart = datetime.strptime(oldStartStr, "%H:%M")
@@ -460,8 +501,8 @@ def new_booking():
         return redirect("/?year=%s&month=%s" % (year, month))
 
     # Insert new data
-    query = 'INSERT INTO booking(working_id, start, finish, name, email, note) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id;'
-    cur.execute(query, (working_id, start, finish, name, email, note))
+    query = 'INSERT INTO booking(working_id, start, finish, name, email, note, price) VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING id;'
+    cur.execute(query, (working_id, start, finish, name, email, note, price))
     booking_id = cur.fetchone()[0]
     conn.commit()
 
@@ -494,6 +535,11 @@ def new_booking2():
     name = data["name"]
     email = data["email"]
     note = data["note"]
+    price = data["price"]
+    if price == "true":
+        price = True
+    elif price == "false":
+        price = False
     products = data["products"]
 
     # Get or create a new working record
@@ -511,8 +557,8 @@ def new_booking2():
         working_id = row[0]
 
     # Insert new data
-    query = 'INSERT INTO booking(working_id, start, finish, name, email, note) VALUES(%s, %s, %s, %s, %s, %s) RETURNING id;'
-    cur.execute(query, (working_id, start, finish, name, email, note))
+    query = 'INSERT INTO booking(working_id, start, finish, name, email, note, price) VALUES(%s, %s, %s, %s, %s, %s, %s) RETURNING id;'
+    cur.execute(query, (working_id, start, finish, name, email, note, price))
     booking_id = cur.fetchone()[0]
     conn.commit()
 
@@ -543,10 +589,15 @@ def edit_booking():
     name = data["name"]
     email = data["email"]
     note = data["note"]
+    price = data["price"]
+    if price == "true":
+        price = True
+    elif price == "false":
+        price = False
     products = data["products"]
 
-    query = 'UPDATE booking SET start = %s, finish = %s, name = %s, email = %s, note = %s WHERE id = %s;'
-    cur.execute(query, (start, finish, name, email, note, booking_id))
+    query = 'UPDATE booking SET start = %s, finish = %s, name = %s, email = %s, note = %s, price = %s WHERE id = %s;'
+    cur.execute(query, (start, finish, name, email, note, price, booking_id))
     conn.commit()
 
     query = 'DELETE FROM booking_products WHERE booking_id = %s;'
@@ -580,14 +631,15 @@ def list_booking():
     to_char(booking.finish, \'HH24:MI\'), 
     booking.name, 
     booking.email, 
-    booking.note FROM booking INNER JOIN working ON 
+    booking.note, 
+    booking.price FROM booking INNER JOIN working ON 
     booking.working_id = working.id;'''
     cur.execute(query)
 
     booking = []
     rows = cur.fetchall()
     for row in rows:
-        booking.append({"id":row[0], "working_id":row[1], "date":row[2], "start":row[3], "finish":row[4], "name":row[5], "email":row[6], "note":row[7], "products":[]})
+        booking.append({"id":row[0], "working_id":row[1], "date":row[2], "start":row[3], "finish":row[4], "name":row[5], "email":row[6], "note":row[7], "price":row[8], "products":[]})
 
     for book in booking:
         query = '''SELECT 
@@ -626,11 +678,12 @@ def get_booking():
     to_char(booking.finish, \'HH24:MI\'), 
     booking.name, 
     booking.email, 
-    booking.note FROM booking WHERE booking.id = %s;'''
+    booking.note,
+    booking.price FROM booking WHERE booking.id = %s;'''
     cur.execute(query, (booking_id,))
 
     row = cur.fetchone()
-    booking = {"id":row[0], "working_id":row[1], "start":row[2], "finish":row[3], "name":row[4], "email":row[5], "note":row[6], "products":[]}
+    booking = {"id":row[0], "working_id":row[1], "start":row[2], "finish":row[3], "name":row[4], "email":row[5], "note":row[6], "price":row[7], "products":[]}
 
     query = '''SELECT 
     booking_products.product_id,
@@ -729,6 +782,27 @@ def delete_access():
 
     query = 'DELETE FROM access WHERE code = %s;'
     cur.execute(query, (code,))
+    
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return redirect("/?year=%s&month=%s" % (year, month))
+
+@app.route("/internal/price", methods=["POST"])
+def set_price():
+    if "auth" not in session:
+        return redirect("/login")
+
+    price = request.form["price"]
+    year = request.form["year"]
+    month = request.form["month"]
+
+    conn = connect()
+    cur = conn.cursor()
+
+    query = 'UPDATE price SET more = %s;'
+    cur.execute(query, (price,))
     
     conn.commit()
     cur.close()

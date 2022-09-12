@@ -4,4 +4,4 @@ export DB_HOST=localhost
 export DB_PORT=5432
 export DB_NAME=calendar
 export UNISENDER_TOKEN=614mpmfijiyn3ztz5kt916x4epnqgypmbtacy9oy
-export RECEIVER_EMAIL=bigejad270@iunicus.com
+export RECEIVER_EMAIL=girevek615@esmoud.com
