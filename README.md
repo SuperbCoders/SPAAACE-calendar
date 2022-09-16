@@ -135,7 +135,8 @@ RECEIVER_EMAIL=address@mail.ru
 						"name": "TEST1"
 					}
 				],
-				"start": "08:00"
+				"start": "08:00",
+				"price": true
 			}
 		],
 		"date": "2022.09.07",
@@ -159,7 +160,8 @@ RECEIVER_EMAIL=address@mail.ru
 	"note": "Заметки о заявке",
 	"products": [
 		"id": "VF2XC5"
-	]
+	],
+	"price":true
 }
 ```
 Ответ:
@@ -173,7 +175,8 @@ RECEIVER_EMAIL=address@mail.ru
 	"products": [
 		"VF2XC5"
 	],
-	"start": "08:00"
+	"start": "08:00",
+	"price":true
 }
 ```
 
