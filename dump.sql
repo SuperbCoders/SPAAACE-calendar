@@ -68,7 +68,8 @@ CREATE TABLE public.booking (
     finish time without time zone DEFAULT LOCALTIME(0) NOT NULL,
     note text DEFAULT ''::text NOT NULL,
     name text NOT NULL,
-    email text NOT NULL
+    email text NOT NULL,
+    price BOOL NOT NULL DEFAULT false
 );
 
 
@@ -225,8 +226,6 @@ ALTER TABLE ONLY public.booking
 CREATE TABLE public.price (
 	more int NOT NULL DEFAULT 10000
 );
-
-ALTER TABLE booking ADD COLUMN price BOOL NOT NULL DEFAULT false;
 
 --update1.sql
 INSERT INTO public.price DEFAULT VALUES;
