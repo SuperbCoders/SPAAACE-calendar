@@ -217,11 +217,6 @@ ALTER TABLE ONLY public.booking_products
 ALTER TABLE ONLY public.booking
     ADD CONSTRAINT booking_working_id_fkey FOREIGN KEY (working_id) REFERENCES public.working(id) ON DELETE CASCADE;
 
-
---
--- PostgreSQL database dump complete
---
-
 --update.sql
 CREATE TABLE public.price (
 	more int NOT NULL DEFAULT 10000
@@ -229,3 +224,7 @@ CREATE TABLE public.price (
 
 --update1.sql
 INSERT INTO public.price DEFAULT VALUES;
+
+--
+-- PostgreSQL database dump complete
+--
